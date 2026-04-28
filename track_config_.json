@@ -1,0 +1,18 @@
+{
+  "interval_seconds": 600,
+  "items": [
+    {
+      "name": "Example Product",
+      "url": "https://www.example.com/product",
+      "method": "text",
+      "in_stock_text": "Add to Cart"
+    }
+  ],
+  "notify": {
+    "email": {
+      "enabled": false,
+      "smtp_host": "smtp.gmail.com",
+      "smtp_port": 587
+    }
+  }
+}
