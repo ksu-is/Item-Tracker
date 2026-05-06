@@ -1,146 +1,89 @@
-import time
-import json
-import smtplib
 import requests
 from bs4 import BeautifulSoup
-from email.mime.text import MIMEText
-from typing import List, Dict, Optional
+import time
+import json
+import os
 
-CONFIG_FILE = "track_config.json"
-STATE_FILE = "track_state.json"
+# --- CONFIGURATION ---
+DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1501733422685618287/d0G2YKxq5S4M4T8Y79FmGZQqudiapkS4ZP-Z6Sv6EwfcWofdBA_m4DlY2CQa87Iii15I"
 
-# ---------------------------
-# Notification helpers
-# ---------------------------
+# Items you want to track
+# Update the URLs and 'in_stock_text' based on the specific store
+TRACKING_LIST = [
+    {
+        "name": "NeeDoh Nice Cube",
+        "url": "https://www.amazon.com/Schylling-Nee-Doh-Nice-Cube-The-Squishy-Crunchy-Stress-Ball/dp/B0BSRFCRMD",
+        "in_stock_text": "Add to Cart" 
+    }
+]
 
-def send_email(smtp_host: str, smtp_port: int, username: str, password: str,
-               from_addr: str, to_addrs: List[str], subject: str, body: str):
-    msg = MIMEText(body, "plain", "utf-8")
-    msg["Subject"] = subject
-    msg["From"] = from_addr
-    msg["To"] = ", ".join(to_addrs)
-    with smtplib.SMTP(smtp_host, smtp_port) as s:
-        s.starttls()
-        s.login(username, password)
-        s.sendmail(from_addr, to_addrs, msg.as_string())
+LOG_FILE = "tracker_log.txt"
+CHECK_INTERVAL = 300  # Check every 5 minutes (300 seconds)
 
-def send_telegram(bot_token: str, chat_id: str, text: str):
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    requests.post(url, data={"chat_id": chat_id, "text": text})
+# --- FUNCTIONS ---
 
-# ---------------------------
-# Page check logic
-# ---------------------------
+def send_discord_notification(message):
+    """Sends a message to your Discord channel."""
+    data = {"content": message}
+    try:
+        response = requests.post(DISCORD_WEBHOOK, json=data)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Discord alert failed: {e}")
 
-def fetch_page(url):
-    # This header makes the script look like a real browser to avoid being blocked
+def check_stock(url, search_text):
+    """Scrapes the page to see if the 'In Stock' text exists."""
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        return response.text
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching {url}: {e}")
-        return None
+        res = requests.get(url, headers=headers, timeout=10)
+        res.raise_for_status()
+        soup = BeautifulSoup(res.text, 'html.parser')
+        
+        # If the search text (like 'Add to Cart') is found, return True
+        return search_text.lower() in soup.get_text().lower()
+    except Exception as e:
+        print(f"Error checking {url}: {e}")
+        return False
 
-def check_in_stock_from_html(html: str, method: str, query: str, in_stock_text: Optional[str]) -> bool:
-    # method: "css" or "text"
-    soup = BeautifulSoup(html, "html.parser")
-    if method == "css":
-        el = soup.select_one(query)
-        if el is None:
-            # if selector missing, assume out of stock
-            return False
-        txt = el.get_text(separator=" ", strip=True).lower()
-    else:
-        txt = soup.get_text(separator=" ", strip=True).lower()
-    if in_stock_text:
-        return in_stock_text.lower() in txt
-    # fallback simple heuristic: look for "out of stock"/"sold out"
-    blocked = ["out of stock", "sold out", "unavailable", "temporarily unavailable"]
-    return not any(b in txt for b in blocked)
+def log_event(message):
+    """Saves a timestamped message to a local text file."""
+    with open(LOG_FILE, "a") as f:
+        f.write(f"{time.ctime()}: {message}\n")
 
-# ---------------------------
-# Config/state management
-# ---------------------------
+# --- MAIN LOOP ---
 
-def load_json(path: str, default):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return default
+def main():
+    print(f"🚀 NeeDoh Navigator Started. Tracking {len(TRACKING_LIST)} items.")
+    
+    # Track the last known status to avoid spamming notifications
+    last_status = {item['url']: False for item in TRACKING_LIST}
 
-def save_json(path: str, obj):
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(obj, f, indent=2)
-
-# ---------------------------
-# Main tracking loop
-# ---------------------------
-
-def check_item(item_cfg: Dict) -> bool:
-    """
-    item_cfg keys:
-      - name: friendly name
-      - url: product page
-      - method: "css" or "text"
-      - query: css selector (if method == "css") or ignored
-      - in_stock_text: optional text indicating in-stock presence
-      - headers: optional dict of headers
-    """
-    html = fetch_page(item_cfg["url"], headers=item_cfg.get("headers"))
-    return check_in_stock_from_html(html, item_cfg.get("method", "css"),
-                                    item_cfg.get("query", ""), item_cfg.get("in_stock_text"))
-
-def run_loop(config_path=CONFIG_FILE, state_path=STATE_FILE):
-    config = load_json(config_path, {})
-    items: List[Dict] = config.get("items", [])
-    notify_cfg = config.get("notify", {})
-    interval = config.get("interval_seconds", 300)
-
-    state = load_json(state_path, {})
-
-    print(f"Starting tracker for {len(items)} item(s). Poll interval {interval} sec.")
     while True:
-        for item in items:
-            name = item.get("name", item["url"])
-            try:
-                is_in_stock = check_item(item)
-            except Exception as e:
-                print(f"[{name}] Error fetching/checking: {e}")
-                continue
+        for item in TRACKING_LIST:
+            name = item['name']
+            url = item['url']
+            search_text = item['in_stock_text']
 
-            last = state.get(item["url"], {}).get("in_stock")
-            if last is None:
-                # first time, just record
-                state[item["url"]] = {"in_stock": is_in_stock, "last_checked": int(time.time())}
-                print(f"[{name}] initial state: {'IN' if is_in_stock else 'OUT'}")
-                continue
+            print(f"Checking {name}...")
+            currently_in_stock = check_stock(url, search_text)
 
-            if is_in_stock and not last:
-                # newly restocked => notify
-                msg = f"Item back in stock: {name}\n{item['url']}"
-                print(f"[{name}] RESTOCKED -> notifying")
-                if notify_cfg.get("email", {}).get("enabled"):
-                    e = notify_cfg["email"]
-                    try:
-                        send_email(e["smtp_host"], e["smtp_port"], e["username"], e["password"],
-                                   e["from_addr"], e["to_addrs"], f"[Restock] {name}", msg)
-                    except Exception as ex:
-                        print("Email send failed:", ex)
-                if notify_cfg.get("telegram", {}).get("enabled"):
-                    t = notify_cfg["telegram"]
-                    try:
-                        send_telegram(t["bot_token"], t["chat_id"], msg)
-                    except Exception as ex:
-                        print("Telegram send failed:", ex)
+            # Logic: If it WAS out of stock and is NOW in stock, notify!
+            if currently_in_stock and not last_status[url]:
+                msg = f"🚨 **RESTOCK ALERT**: {name} is back! \n🔗 Buy here: {url}"
+                print(msg)
+                send_discord_notification(msg)
+                log_event(f"SUCCESS: {name} Restocked.")
+            
+            elif not currently_in_stock:
+                print(f"{name} is still out of stock.")
+            
+            # Update the status for the next loop
+            last_status[url] = currently_in_stock
 
-            state[item["url"]] = {"in_stock": is_in_stock, "last_checked": int(time.time())}
-        save_json(state_path, state)
-        time.sleep(interval)
+        print(f"Waiting {CHECK_INTERVAL} seconds for next check...\n")
+        time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
-    run_loop()
+    main()
