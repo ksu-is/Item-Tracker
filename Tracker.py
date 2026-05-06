@@ -32,13 +32,18 @@ def send_telegram(bot_token: str, chat_id: str, text: str):
 # Page check logic
 # ---------------------------
 
-def fetch_page(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 15) -> str:
-    headers = headers or {
-        "User-Agent": "Mozilla/5.0 (compatible; ItemTracker/1.0; +https://example.com)"
+def fetch_page(url):
+    # This header makes the script look like a real browser to avoid being blocked
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
-    resp = requests.get(url, headers=headers, timeout=timeout)
-    resp.raise_for_status()
-    return resp.text
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        return response.text
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching {url}: {e}")
+        return None
 
 def check_in_stock_from_html(html: str, method: str, query: str, in_stock_text: Optional[str]) -> bool:
     # method: "css" or "text"
