@@ -47,21 +47,6 @@ def check_stock(url, search_text):
         print(f"Error checking {url}: {e}")
         return False
 
-        res.raise_for_status()
-        soup = BeautifulSoup(res.text, 'html.parser')
-        return search_text.lower() in soup.get_text().lower()
-        
-        try:
-        res = requests.get(url, headers=headers, timeout=10)
-        
-        if res.status_code != 200:
-            print(f"⚠️ Warning: Received status {res.status_code} from {url}. You might be blocked.")
-            return False
-
-        res.raise_for_status()
-        soup = BeautifulSoup(res.text, 'html.parser')
-        return search_text.lower() in soup.get_text().lower()
-
 def log_event(message):
     """Saves a timestamped message to a local text file."""
     with open(LOG_FILE, "a") as f:
