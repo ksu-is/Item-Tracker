@@ -1,18 +1,17 @@
 {
-  "interval_seconds": 600,
+  "interval_seconds": 300,
   "items": [
     {
-      "name": "Example Product",
-      "url": "https://www.example.com/product",
+      "name": "NeeDoh Nice Cube",
+      "url": "https://www.amazon.com/Schylling-Nee-Doh-Nice-Cube-The-Squishy-Crunchy-Stress-Ball/dp/B0BSRFCRMD",
       "method": "text",
       "in_stock_text": "Add to Cart"
     }
   ],
   "notify": {
-    "email": {
-      "enabled": false,
-      "smtp_host": "smtp.gmail.com",
-      "smtp_port": 587
+    "discord": {
+      "enabled": true,
+      "webhook_url": "https://discord.com/api/webhooks/1501733422685618287/d0G2YKxq5S4M4T8Y79FmGZQqudiapkS4ZP-Z6Sv6EwfcWofdBA_m4DlY2CQa87Iii15I"
     }
   }
 }
