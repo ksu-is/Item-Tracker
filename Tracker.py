@@ -11,8 +11,8 @@ DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1501733422685618287/d0G2YKxq
 # Update the URLs and 'in_stock_text' based on the specific store
 TRACKING_LIST = [
     {
-        "name": "NeeDoh Nice Cube",
-        "url": "https://www.amazon.com/Schylling-Nee-Doh-Nice-Cube-The-Squishy-Crunchy-Stress-Ball/dp/B0BSRFCRMD",
+        "name": "NeeDoh FuzzBall",
+        "url": "https://www.amazon.com/Schylling-NeeDoh-Fuzz-Ball-Sensory/dp/B0DR3H6G51/ref=sr_1_1?crid=3TSJLTEAWE59C&dib=eyJ2IjoiMSJ9.STWgLSnkBCsCO9xANjFW7OMkq84DWylVj9WthJPFlOrBrrD6Ivud8gozwDW2uAQxBE0IuFdr6mYWK76dA804WRtaWDglfcHnKIxowbSB9mDSWdDFT0HzdrxvvajhicpAKGCI0EgF5JIFLgY1K1L18wKw4OokFPuYFF5RtO9HF9g1aZNLWgQ7GR5BVFPtUFE6zly8HeE8zDlepvseZQl4qWKCqMDnsSB15NAzMpWtU5s6ixHHNUIUxsmQgaxRERh9-zO7M-vT1QzSchmK_ClodwDPqmvQUlkjyKR0nnEmt7U.MWQlx2ZWG1oV4W7IwwC6J5KlQLZ9Tip88andCPPq13w&dib_tag=se&keywords=needoh&qid=1778113355&sprefix=needoh+%2Caps%2C202&sr=8-1",
         "in_stock_text": "Add to Cart" 
     }
 ]
